@@ -1,0 +1,92 @@
+hashfunction H;
+usertype MAC;
+usertype ConstVal;
+const XOR:Function;
+const CON:Function;
+const LFSR:Function;
+const SUM:Function;
+const MUL:Function;
+const DIV:Function;
+const SUB:Function;
+const PUF:Function;
+const E:Function;
+const POW:Function;
+
+const S1:ConstVal;
+const t1:ConstVal;
+const S2:ConstVal;
+const t2:ConstVal;
+const a1:ConstVal;
+const b1:ConstVal;
+const a2:ConstVal;
+const b2:ConstVal;
+const g:ConstVal;
+const h:ConstVal;
+
+macro Ka=XOR(Ra,TSP);
+macro F1Ka=SUM(S1,MUL(a1,Ka));
+macro G1Ka=SUM(t1,MUL(b1,Ka));
+macro B0=E(S1,t1);
+macro B1=E(a1,b1);
+
+macro RprimeA=PUF(Ca);
+macro KprimeA=XOR(RprimeA,TSP);
+macro gh=MUL(POW(g,F1Ka),POW(h,G1Ka));
+macro b0b1=MUL(B0,POW(B1,KprimeA));
+
+
+macro F2KprimeA=SUM(S2,MUL(a2,KprimeA));
+macro G2KprimeA=SUM(t2,MUL(b2,KprimeA));
+macro D0=E(S2,t2);
+macro D1=E(a2,b2);
+
+macro ghprime=MUL(POW(g,F2KprimeA),POW(h,G2KprimeA));
+macro d0d1=MUL(D0,POW(D1,Ka));
+
+protocol sink-user(sink,user){
+
+	role sink{
+		fresh TSP:Nonce;
+		fresh IDA:Nonce;
+		var Ca;
+		var Ra;
+		send_1(sink, user, (IDA,TSP));
+		recv_2(user, sink, (F1Ka,G1Ka,Ca,B0,B1));
+		match(gh,b0b1);
+		send_3(sink, user, (F2KprimeA,G2KprimeA,D0,D1));
+	
+		//claim(sink, Secret, a2);
+		//claim(sink, Secret, b2);
+		//claim(sink, Secret, S2);
+		//claim(sink, Secret, t2);
+		claim(sink, Secret, RprimeA);
+		claim(sink, Secret, KprimeA);
+		claim(sink,Alive);
+		claim(sink,Niagree);
+		claim(sink,Nisynch);
+		claim(sink,Weakagree);
+	}
+	role user{
+		var TSP;
+		var IDA;
+		fresh Ca:Nonce;
+		fresh Ra:Nonce;
+		recv_1(sink, user, (IDA,TSP));
+		send_2(user, sink, (F1Ka,G1Ka,Ca,B0,B1));
+		recv_3(sink, user, (F2KprimeA,G2KprimeA,D0,D1));
+		match(ghprime,d0d1);
+
+
+		claim(user, Secret, Ra);
+		claim(user, Secret, Ka);
+		//claim(user, Secret, a1);
+		//claim(user, Secret, b1);
+		//claim(user, Secret, S1);
+		//claim(user, Secret, t1);
+		claim(user,Alive);
+		claim(user,Niagree);
+		claim(user,Nisynch);
+		claim(user,Weakagree);
+	}
+
+}
